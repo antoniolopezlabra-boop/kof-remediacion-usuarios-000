@@ -6,8 +6,10 @@ SAP del mandante 000 de Coca-Cola FEMSA, operado por DXC Technology.
 - **Dashboard ejecutivo**: avance, estatus, ambientes, administradores, sistemas, riesgo
   (usuarios con SAP_ALL / SAP_NEW), tendencia diaria, calidad del dato. Filtros cruzados con un clic,
   modo presentación (pantalla completa) y exportación a PDF.
-- **Gestión de usuarios**: el equipo TQS actualiza estatus, No. de KIT y observaciones
-  (individual o masivo). Todo cambio queda en la bitácora y los tableros se recalculan
+- **Gestión de usuarios** (tipo hoja de cálculo): el equipo TQS edita cualquier columna con
+  clic en la celda (Enter/Tab guarda y avanza, Esc cancela), cambia cualquier columna en bloque,
+  agrega filas nuevas («No.» consecutivo automático) o duplica una existente. Solo el
+  administrador puede eliminar filas. Todo cambio queda en la bitácora y los tableros se recalculan
   en vivo para todos (Supabase Realtime).
 - **Asistente IA (Claude)**: responde preguntas con los datos vivos mediante herramientas
   (no inventa cifras) y, cuando la respuesta no está en el tablero, crea una tarjeta

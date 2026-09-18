@@ -47,7 +47,8 @@ export interface Config {
   usuarios_nativos?: string[];
 }
 
-export type CambiosUsuario = Partial<Pick<UsuarioSap, 'remediacion' | 'kit' | 'observaciones' | 'status_sap' | 'privilegio' | 'administrador' | 'nombre' | 'puesto' | 'area' | 'tipo_usuario' | 'vigencia' | 'vigencia_tipo'>>;
+// Cualquier columna editable del inventario (las calculadas por la BD quedan fuera)
+export type CambiosUsuario = Partial<Omit<UsuarioSap, 'id' | 'no' | 'privilegiado' | 'cerrado_at' | 'updated_at' | 'updated_by_email'>>;
 
 interface DatosCtx {
   cargando: boolean;
@@ -69,6 +70,8 @@ interface DatosCtx {
   alternarEspecial: (e: Especial) => void;
   limpiarFiltros: () => void;
   actualizar: (ids: number[], cambios: CambiosUsuario) => Promise<void>;
+  crear: (fila: CambiosUsuario) => Promise<UsuarioSap>;
+  eliminar: (ids: number[]) => Promise<void>;
   recargar: () => Promise<void>;
 }
 
@@ -221,9 +224,25 @@ export function DatosProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const crear = useCallback(async (fila: CambiosUsuario) => {
+    // «No.» lo asigna la BD (consecutivo); la fila llega también por Realtime
+    const { data, error } = await supabase.from('usuarios_sap').insert(fila).select('*').single();
+    if (error) throw new Error(error.message);
+    const nuevo = data as UsuarioSap;
+    setUsuarios((us) => (us.some((u) => u.id === nuevo.id) ? us : [...us, nuevo].sort((a, b) => (a.no ?? 0) - (b.no ?? 0))));
+    marcarReciente(nuevo.id);
+    return nuevo;
+  }, [marcarReciente]);
+
+  const eliminar = useCallback(async (ids: number[]) => {
+    const { error } = await supabase.from('usuarios_sap').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+    setUsuarios((us) => us.filter((u) => !ids.includes(u.id)));
+  }, []);
+
   const value: DatosCtx = {
     cargando, error, conectado, usuarios, catalogo, config, widgets, snapshots, actividad, ctx, recientes, ultimoCambio,
-    filtros, filtrados, alternarFiltro, alternarEspecial, limpiarFiltros, actualizar, recargar,
+    filtros, filtrados, alternarFiltro, alternarEspecial, limpiarFiltros, actualizar, crear, eliminar, recargar,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

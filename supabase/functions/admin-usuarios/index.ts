@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
           email,
           password: body.password,
           email_confirm: true,
-          user_metadata: { nombre: body.nombre ?? email.split('@')[0], rol },
+          user_metadata: { nombre: body.nombre ?? email.split('@')[0] },
+          app_metadata: { rol },
         });
         if (error) throw error;
         return json({ ok: true, id: data.user.id });

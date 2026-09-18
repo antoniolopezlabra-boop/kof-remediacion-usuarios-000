@@ -88,7 +88,7 @@ async function main() {
         email: adminEmail,
         password,
         email_confirm: true,
-        user_metadata: { rol: 'admin' },
+        app_metadata: { rol: 'admin' },
       });
       if (error) throw error;
       console.log(`Administrador creado: ${adminEmail}\nContraseña temporal (cámbiala al entrar): ${password}`);

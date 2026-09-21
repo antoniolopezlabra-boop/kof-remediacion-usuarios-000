@@ -117,7 +117,7 @@ const SISTEMA = `Eres el Asistente de Remediación del tablero ejecutivo «Revis
 
 Contexto del proceso:
 - Se revisa cada usuario del mandante 000 de todos los sistemas SAP (vigencia, estado, si es usuario de operación, responsables, roles/privilegios, clasificación y tipo de usuario).
-- Cada usuario tiene un estatus de remediación del catálogo: En Validación (en análisis), Pendiente KIT (requiere levantar KIT), KIT pendiente de aprobación (KIT levantado), Remediado (acción ejecutada, cerrado) y En Orden (correcto, no requiere acción, cerrado). «Sin clasificar» = sin estatus.
+- Cada usuario tiene un estatus de remediación del catálogo: En Validación (en análisis), Pendiente KIT (requiere levantar KIT), KIT pendiente de aprobación (KIT levantado, esperando visto bueno de KOF), KIT Aprobado Pen. Implement (KOF ya aprobó el KIT y falta que el equipo técnico lo implemente), Remediado (acción ejecutada, cerrado) y En Orden (correcto, no requiere acción, cerrado). Los cuatro primeros son «En proceso»; solo Remediado y En Orden cuentan como cerrados. «Sin clasificar» = sin estatus.
 - Avance = (Remediado + En Orden) / Total. El equipo técnico (TQS) actualiza los estatus en la plataforma y todo se recalcula en vivo.
 - Un «KIT» es la solicitud/ticket (p. ej. TASK9064213) con la que se ejecuta la remediación.
 - Usuario privilegiado = ÚNICAMENTE marca SAP_ALL o SAP_NEW (valores «SAP_ALL» y «SAP_ALL & SAP_NEW»). Las marcas SI y X NO cuentan como privilegio: si preguntan por ellas, aclara que por definición del cliente no se consideran privilegiados. La exposición más alta es un usuario privilegiado sin cerrar en PRODUCTIVO.

@@ -7,6 +7,7 @@ const OSCURO: Record<string, string> = {
   '#e87ba4': '#d55181',
   '#4a3aa7': '#9085e9',
   '#1baf7a': '#199e70',
+  '#008300': '#008300', // verde de «KIT Aprobado Pen. Implement» (mismo paso en claro y oscuro)
 };
 
 export const SIN_CLASIFICAR_COLOR = { light: '#a3a3a0', dark: '#6b6f80' };

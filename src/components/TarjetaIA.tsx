@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Sparkles, Trash2, MessageSquareQuote, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useMemo } from 'react';
+import { Sparkles, Trash2, MessageSquareQuote, Download } from 'lucide-react';
 import { calcularTarjeta, filtrar, DIMENSIONES, ESPECIALES, type FilaAgregada, type UsuarioSap } from '../../supabase/functions/_shared/datos.ts';
 import { useDatos, type Widget } from '../lib/datos';
 import { useTema } from '../lib/tema';
@@ -8,65 +8,24 @@ import { ETIQUETAS_CAMPO, fmt, pct } from '../lib/ui';
 import { descargarCSV, nombreArchivo } from '../lib/csv';
 import { opcionApiladaGenerica, opcionBarras, opcionDonaGenerica, opcionMapaCalor, opcionCerradoAbierto } from '../lib/graficas';
 import { Grafica } from './Grafica';
-import clsx from 'clsx';
 import { Barra, PildoraEstatus } from './ui';
-
-export type Orden = { campo: string; dir: 1 | -1 } | null;
-
-/** Encabezado que ordena: 1er clic ascendente, 2º descendente, 3º vuelve al orden original. */
-function Th({ campo, etiqueta, orden, setOrden, className }: { campo: string; etiqueta: string; orden: Orden; setOrden: (o: Orden) => void; className?: string }) {
-  const activo = orden?.campo === campo;
-  const siguiente: Orden = !activo ? { campo, dir: 1 } : orden!.dir === 1 ? { campo, dir: -1 } : null;
-  return (
-    <th className={clsx('px-2.5 py-2 font-medium whitespace-nowrap', className)}>
-      <button
-        onClick={() => setOrden(siguiente)}
-        className="inline-flex items-center gap-1 hover:text-ink"
-        title={activo ? (orden!.dir === 1 ? 'Orden ascendente · clic para descendente' : 'Orden descendente · clic para quitar el orden') : 'Ordenar por esta columna'}
-      >
-        {etiqueta}
-        {activo ? (orden!.dir === 1 ? <ArrowUp className="size-3 text-accent-ink" /> : <ArrowDown className="size-3 text-accent-ink" />) : <ArrowUpDown className="size-3 opacity-40" />}
-      </button>
-    </th>
-  );
-}
+import { Th, useOrden, type Orden } from './Ordenable';
 
 export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?: () => void; destacada?: boolean }) {
   const { usuarios, ctx, catalogo } = useDatos();
   const { oscuro } = useTema();
   const { perfil, puedeEditar } = useAuth();
   const r = useMemo(() => calcularTarjeta(usuarios, w.spec, ctx), [usuarios, w.spec, ctx]);
-  const [orden, setOrden] = useState<Orden>(null);
-
-  // Orden por columna: los estatus siguen el orden del catálogo, los números son numéricos,
-  // el resto alfabético en español; los valores vacíos siempre quedan al final.
-  const ordenar = useMemo(() => {
-    const posEstatus = new Map(catalogo.map((c) => [c.nombre, c.orden]));
-    return <T,>(arr: T[], valor: (x: T) => unknown): T[] => {
-      if (!orden) return arr;
-      const campo = orden.campo;
-      return [...arr].sort((a, b) => {
-        const va = valor(a);
-        const vb = valor(b);
-        const vacio = (v: unknown) => v === null || v === undefined || v === '' || v === '(vacío)';
-        const vacioA = vacio(va);
-        const vacioB = vacio(vb);
-        if (vacioA || vacioB) return vacioA && vacioB ? 0 : vacioA ? 1 : -1;
-        if (campo === 'remediacion') return ((posEstatus.get(String(va)) ?? 99) - (posEstatus.get(String(vb)) ?? 99)) * orden.dir;
-        if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * orden.dir;
-        return String(va).localeCompare(String(vb), 'es', { numeric: true }) * orden.dir;
-      });
-    };
-  }, [orden, catalogo]);
+  const { orden, setOrden, ordenar } = useOrden(catalogo);
 
   // Se ordena el universo completo del filtro y luego se recorta a lo que cabe en la tarjeta
   const filasLista = useMemo(() => {
     if (r.tipo !== 'lista') return [];
     if (!orden) return r.filas as UsuarioSap[];
-    return ordenar(filtrar(usuarios, w.spec, ctx), (u) => u[orden.campo as keyof UsuarioSap]).slice(0, r.filas.length);
+    return ordenar(filtrar(usuarios, w.spec, ctx), (u, c) => u[c as keyof UsuarioSap]).slice(0, r.filas.length);
   }, [r, ordenar, orden, usuarios, w.spec, ctx]);
   const filasTabla = useMemo(
-    () => (r.tipo === 'tabla' ? ordenar(r.filas as FilaAgregada[], (f) => f[(orden?.campo ?? 'clave') as keyof FilaAgregada]) : []),
+    () => (r.tipo === 'tabla' ? ordenar(r.filas as FilaAgregada[], (f, c) => f[c as keyof FilaAgregada]) : []),
     [r, ordenar, orden],
   );
   const puedeBorrar = puedeEditar || w.created_by === perfil?.id;
@@ -93,7 +52,7 @@ export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?
         r.columnas.map((c) => ETIQUETAS_CAMPO[c] ?? c),
         // El CSV lleva TODOS los usuarios del filtro (no solo los que caben en pantalla),
         // en el mismo orden que se ve en la tarjeta
-        ordenar(filtrar(usuarios, w.spec, ctx), (u) => u[orden?.campo as keyof UsuarioSap]).map((u) => r.columnas.map((c) => u[c as keyof UsuarioSap])),
+        ordenar(filtrar(usuarios, w.spec, ctx), (u, c) => u[c as keyof UsuarioSap]).map((u) => r.columnas.map((c) => u[c as keyof UsuarioSap])),
       );
       return;
     }
@@ -109,7 +68,7 @@ export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?
   const ancho = w.spec.tipo === 'lista' || w.spec.tipo === 'tabla' || w.spec.tipo === 'mapa_calor' ? 'lg:col-span-2' : '';
 
   return (
-    <article className={`card flex flex-col p-4 sm:p-5 ${ancho} ${destacada ? 'ring-2 ring-accent' : ''}`}>
+    <article className={`card flex min-w-0 flex-col p-4 sm:p-5 ${ancho} ${destacada ? 'ring-2 ring-accent' : ''}`}>
       <header className="mb-3 flex items-start gap-3">
         <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent-ink">
           <Sparkles className="size-4" />

@@ -4,7 +4,8 @@ Tablero ejecutivo y plataforma operativa para la remediación de usuarios
 SAP del mandante 000 de Coca-Cola FEMSA, operado por DXC Technology.
 
 - **Dashboard ejecutivo**: avance, estatus, ambientes, administradores, sistemas, riesgo
-  (usuarios con SAP_ALL / SAP_NEW), tendencia diaria, calidad del dato. Filtros cruzados con un clic,
+  (usuarios con SAP_ALL / SAP_NEW), detalle por SID (filtro de ambiente → SID con estatus,
+  tipos de usuario y lista exportable), tendencia diaria, calidad del dato. Filtros cruzados con un clic,
   modo presentación (pantalla completa) y exportación a PDF.
 - **Gestión de usuarios** (tipo hoja de cálculo): el equipo TQS edita cualquier columna con
   clic en la celda (Enter/Tab guarda y avanza, Esc cancela), cambia cualquier columna en bloque,

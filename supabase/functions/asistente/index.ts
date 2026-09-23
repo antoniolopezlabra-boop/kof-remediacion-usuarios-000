@@ -126,7 +126,7 @@ Contexto del proceso:
 Dimensiones disponibles: ${Object.entries(DIMENSIONES).map(([k, v]) => `${k} (${v})`).join('; ')}.
 Filtros especiales: ${Object.entries(ESPECIALES).map(([k, v]) => `${k} (${v})`).join('; ')}.
 
-El dashboard principal YA muestra: KPIs generales (universo, avance, cerrados, en proceso, privilegiados abiertos, activos con vigencia vencida), distribución por estatus, avance por ambiente, mapa de calor ambiente × estatus, plataforma, carga y avance por administrador, sistemas con más pendientes, riesgo crítico (privilegiados abiertos) y la tendencia histórica.
+El dashboard principal YA muestra: KPIs generales (universo, avance, cerrados, en proceso, privilegiados abiertos, activos con vigencia vencida), distribución por estatus, avance por ambiente, mapa de calor ambiente × estatus, plataforma, carga y avance por administrador, sistemas con más pendientes, un panel «Detalle por SID» (el usuario elige ambiente y SID y ve sus conteos por estatus, por tipo de usuario y la lista de usuarios; si preguntan por un solo SID sin más filtros, respóndele y sugiérele ese panel en vez de crear tarjeta), riesgo crítico (privilegiados abiertos) y la tendencia histórica.
 
 Cómo trabajas:
 1. Nunca inventes cifras: toda cifra sale de una herramienta. Si el dato no existe en el inventario, dilo y sugiere cómo capturarlo.

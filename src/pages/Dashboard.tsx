@@ -14,6 +14,7 @@ import { opcionApiladaEstatus, opcionCerradoAbierto, opcionDona, opcionMapaCalor
 import { Grafica, type ClickGrafica } from '../components/Grafica';
 import { Barra, Kpi, PildoraEstatus, Seccion, Tarjeta, useAvisos } from '../components/ui';
 import { TarjetaIA } from '../components/TarjetaIA';
+import { DetalleSid } from '../components/DetalleSid';
 import type { LayoutCtx } from '../components/Layout';
 
 export default function Dashboard() {
@@ -282,10 +283,20 @@ export default function Dashboard() {
         </div>
       </Seccion>
 
-      {/* 5. Riesgo crítico */}
+      {/* 5. Detalle por SID */}
+      <Seccion
+        id="detalle-sid"
+        numero="05 · Detalle por SID"
+        titulo="Detalle por SID"
+        descripcion="Elige un ambiente para acotar la lista de SIDs y consulta el avance completo de un sistema: estatus, tipos de usuario y el listado de sus usuarios."
+      >
+        <DetalleSid />
+      </Seccion>
+
+      {/* 6. Riesgo crítico */}
       <Seccion
         id="riesgo"
-        numero="05 · Riesgo"
+        numero="06 · Riesgo"
         titulo="Riesgo crítico — usuarios con SAP_ALL / SAP_NEW"
         descripcion="Se consideran privilegiados únicamente los usuarios con perfil SAP_ALL o SAP_NEW. Uno de ellos sin cerrar en PRODUCTIVO es la exposición más alta del inventario."
         acciones={
@@ -336,7 +347,7 @@ export default function Dashboard() {
       </Seccion>
 
       {/* 6. Tendencia y actividad */}
-      <Seccion id="tendencia" numero="06 · Tendencia" titulo="Evolución del avance y actividad del equipo" descripcion="Cada cambio de estatus queda registrado: la curva muestra el % cerrado por día desde la fecha de corte.">
+      <Seccion id="tendencia" numero="07 · Tendencia" titulo="Evolución del avance y actividad del equipo" descripcion="Cada cambio de estatus queda registrado: la curva muestra el % cerrado por día desde la fecha de corte.">
         <div className="grid gap-4 lg:grid-cols-12">
           <Tarjeta className="lg:col-span-7" titulo="% de avance por día" subtitulo={snapshots.length < 3 ? 'La curva crece conforme el equipo registra avances diarios' : undefined}>
             <Grafica etiqueta="Tendencia del avance" alto={280} opcion={opcionTendencia(snapshots, catalogo, oscuro)} />
@@ -381,7 +392,7 @@ export default function Dashboard() {
       {/* 7. Insights IA */}
       <Seccion
         id="insights"
-        numero="07 · Insights IA"
+        numero="08 · Insights IA"
         titulo="Insights generados por el Asistente IA"
         descripcion="Cortes que surgieron de preguntas al asistente. Cada tarjeta guarda su consulta y se recalcula en vivo con los datos del equipo."
         acciones={
@@ -403,7 +414,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {widgets.map((w) => (
-              <div key={w.id} id={`tarjeta-${w.id}`} className={clsx(w.spec.tipo === 'lista' || w.spec.tipo === 'tabla' || w.spec.tipo === 'mapa_calor' ? 'lg:col-span-2' : '')}>
+              <div key={w.id} id={`tarjeta-${w.id}`} className={clsx('min-w-0', (w.spec.tipo === 'lista' || w.spec.tipo === 'tabla' || w.spec.tipo === 'mapa_calor') && 'lg:col-span-2')}>
                 <TarjetaIA w={w} destacada={w.id === destacada} onEliminar={() => eliminarTarjeta(w.id)} />
               </div>
             ))}
@@ -412,7 +423,7 @@ export default function Dashboard() {
       </Seccion>
 
       {/* 8. Calidad del dato */}
-      <Seccion id="calidad" numero="08 · Gobierno" titulo="Calidad del dato y catálogo de estatus" descripcion="Brechas de información que conviene cerrar para completar la remediación del inventario.">
+      <Seccion id="calidad" numero="09 · Gobierno" titulo="Calidad del dato y catálogo de estatus" descripcion="Brechas de información que conviene cerrar para completar la remediación del inventario.">
         <div className="grid gap-4 lg:grid-cols-12">
           <Tarjeta className="lg:col-span-5" titulo="Brechas de información" subtitulo="Campos sin documentar en la vista actual">
             <ul className="space-y-3">

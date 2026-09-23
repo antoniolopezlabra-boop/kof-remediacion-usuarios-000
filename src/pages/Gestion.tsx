@@ -44,7 +44,15 @@ export default function Gestion() {
   const [params] = useSearchParams();
 
   const [texto, setTexto] = useState('');
-  const [sel, setSel] = useState<Partial<Record<Dimension, string>>>({});
+  // Filtros iniciales desde la URL (p. ej. «Editar en Gestión» del Detalle por SID: ?sid=RAP)
+  const [sel, setSel] = useState<Partial<Record<Dimension, string>>>(() => {
+    const ini: Partial<Record<Dimension, string>> = {};
+    for (const d of ['sid', 'sistema', 'ambiente'] as Dimension[]) {
+      const v = params.get(d);
+      if (v) ini[d] = v;
+    }
+    return ini;
+  });
   const [esp, setEsp] = useState<Especial[]>(() => TOGGLES.map((t) => t.esp).filter((e) => params.get(e) === '1'));
   const [pagina, setPagina] = useState(0);
   const [orden, setOrden] = useState<Orden>({ campo: 'no', dir: 1 });

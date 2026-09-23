@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Sparkles, Trash2, MessageSquareQuote, Download } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Sparkles, Trash2, MessageSquareQuote, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { calcularTarjeta, filtrar, DIMENSIONES, ESPECIALES, type FilaAgregada, type UsuarioSap } from '../../supabase/functions/_shared/datos.ts';
 import { useDatos, type Widget } from '../lib/datos';
 import { useTema } from '../lib/tema';
@@ -8,13 +8,67 @@ import { ETIQUETAS_CAMPO, fmt, pct } from '../lib/ui';
 import { descargarCSV, nombreArchivo } from '../lib/csv';
 import { opcionApiladaGenerica, opcionBarras, opcionDonaGenerica, opcionMapaCalor, opcionCerradoAbierto } from '../lib/graficas';
 import { Grafica } from './Grafica';
+import clsx from 'clsx';
 import { Barra, PildoraEstatus } from './ui';
+
+export type Orden = { campo: string; dir: 1 | -1 } | null;
+
+/** Encabezado que ordena: 1er clic ascendente, 2º descendente, 3º vuelve al orden original. */
+function Th({ campo, etiqueta, orden, setOrden, className }: { campo: string; etiqueta: string; orden: Orden; setOrden: (o: Orden) => void; className?: string }) {
+  const activo = orden?.campo === campo;
+  const siguiente: Orden = !activo ? { campo, dir: 1 } : orden!.dir === 1 ? { campo, dir: -1 } : null;
+  return (
+    <th className={clsx('px-2.5 py-2 font-medium whitespace-nowrap', className)}>
+      <button
+        onClick={() => setOrden(siguiente)}
+        className="inline-flex items-center gap-1 hover:text-ink"
+        title={activo ? (orden!.dir === 1 ? 'Orden ascendente · clic para descendente' : 'Orden descendente · clic para quitar el orden') : 'Ordenar por esta columna'}
+      >
+        {etiqueta}
+        {activo ? (orden!.dir === 1 ? <ArrowUp className="size-3 text-accent-ink" /> : <ArrowDown className="size-3 text-accent-ink" />) : <ArrowUpDown className="size-3 opacity-40" />}
+      </button>
+    </th>
+  );
+}
 
 export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?: () => void; destacada?: boolean }) {
   const { usuarios, ctx, catalogo } = useDatos();
   const { oscuro } = useTema();
   const { perfil, puedeEditar } = useAuth();
   const r = useMemo(() => calcularTarjeta(usuarios, w.spec, ctx), [usuarios, w.spec, ctx]);
+  const [orden, setOrden] = useState<Orden>(null);
+
+  // Orden por columna: los estatus siguen el orden del catálogo, los números son numéricos,
+  // el resto alfabético en español; los valores vacíos siempre quedan al final.
+  const ordenar = useMemo(() => {
+    const posEstatus = new Map(catalogo.map((c) => [c.nombre, c.orden]));
+    return <T,>(arr: T[], valor: (x: T) => unknown): T[] => {
+      if (!orden) return arr;
+      const campo = orden.campo;
+      return [...arr].sort((a, b) => {
+        const va = valor(a);
+        const vb = valor(b);
+        const vacio = (v: unknown) => v === null || v === undefined || v === '' || v === '(vacío)';
+        const vacioA = vacio(va);
+        const vacioB = vacio(vb);
+        if (vacioA || vacioB) return vacioA && vacioB ? 0 : vacioA ? 1 : -1;
+        if (campo === 'remediacion') return ((posEstatus.get(String(va)) ?? 99) - (posEstatus.get(String(vb)) ?? 99)) * orden.dir;
+        if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * orden.dir;
+        return String(va).localeCompare(String(vb), 'es', { numeric: true }) * orden.dir;
+      });
+    };
+  }, [orden, catalogo]);
+
+  // Se ordena el universo completo del filtro y luego se recorta a lo que cabe en la tarjeta
+  const filasLista = useMemo(() => {
+    if (r.tipo !== 'lista') return [];
+    if (!orden) return r.filas as UsuarioSap[];
+    return ordenar(filtrar(usuarios, w.spec, ctx), (u) => u[orden.campo as keyof UsuarioSap]).slice(0, r.filas.length);
+  }, [r, ordenar, orden, usuarios, w.spec, ctx]);
+  const filasTabla = useMemo(
+    () => (r.tipo === 'tabla' ? ordenar(r.filas as FilaAgregada[], (f) => f[(orden?.campo ?? 'clave') as keyof FilaAgregada]) : []),
+    [r, ordenar, orden],
+  );
   const puedeBorrar = puedeEditar || w.created_by === perfil?.id;
 
   const filtrosTxt = [
@@ -37,16 +91,18 @@ export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?
       descargarCSV(
         archivo,
         r.columnas.map((c) => ETIQUETAS_CAMPO[c] ?? c),
-        // El CSV lleva TODOS los usuarios del filtro, no solo los que caben en pantalla
-        filtrar(usuarios, w.spec, ctx).map((u) => r.columnas.map((c) => u[c as keyof UsuarioSap])),
+        // El CSV lleva TODOS los usuarios del filtro (no solo los que caben en pantalla),
+        // en el mismo orden que se ve en la tarjeta
+        ordenar(filtrar(usuarios, w.spec, ctx), (u) => u[orden?.campo as keyof UsuarioSap]).map((u) => r.columnas.map((c) => u[c as keyof UsuarioSap])),
       );
       return;
     }
     const series = [...new Set(r.filas.flatMap((f) => Object.keys(f.series ?? {})))];
+    const filas = r.tipo === 'tabla' ? filasTabla : r.filas;
     descargarCSV(
       archivo,
       [DIMENSIONES[w.spec.dimension!] ?? 'Grupo', 'Total', 'Cerrados', 'Abiertos', 'Avance', ...series],
-      r.filas.map((f) => [f.clave, f.total, f.cerrados, f.abiertos, pct(f.avance), ...series.map((s) => f.series?.[s] ?? 0)]),
+      filas.map((f) => [f.clave, f.total, f.cerrados, f.abiertos, pct(f.avance), ...series.map((s) => f.series?.[s] ?? 0)]),
     );
   }
 
@@ -93,7 +149,7 @@ export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?
             <Grafica etiqueta={w.titulo} alto={Math.max(180, r.filas!.length * 30 + 50)} opcion={opcionApiladaGenerica(r.filas!, oscuro, catalogo, w.spec.serie === 'remediacion')} />
           ))}
         {r.tipo === 'mapa_calor' && <MapaCalorIA filas={r.filas!} />}
-        {r.tipo === 'tabla' && <TablaAgregada filas={r.filas!} etiqueta={DIMENSIONES[w.spec.dimension!]} />}
+        {r.tipo === 'tabla' && <TablaAgregada filas={filasTabla} etiqueta={DIMENSIONES[w.spec.dimension!]} orden={orden} setOrden={setOrden} />}
         {r.tipo === 'lista' && (
           <div>
             <p className="mb-2 text-xs text-muted">
@@ -102,10 +158,10 @@ export function TarjetaIA({ w, onEliminar, destacada }: { w: Widget; onEliminar?
             <div className="max-h-72 overflow-auto scroll-thin rounded-lg border border-line">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-surface-2 text-left text-muted">
-                  <tr>{r.columnas.map((c) => <th key={c} className="px-2.5 py-2 font-medium whitespace-nowrap">{ETIQUETAS_CAMPO[c] ?? c}</th>)}</tr>
+                  <tr>{r.columnas.map((c) => <Th key={c} campo={c} etiqueta={ETIQUETAS_CAMPO[c] ?? c} orden={orden} setOrden={setOrden} />)}</tr>
                 </thead>
                 <tbody>
-                  {r.filas.map((u: UsuarioSap) => (
+                  {filasLista.map((u: UsuarioSap) => (
                     <tr key={u.id} className="border-t border-line">
                       {r.columnas.map((c) => (
                         <td key={c} className="px-2.5 py-1.5 whitespace-nowrap text-ink-2">
@@ -141,17 +197,17 @@ function MapaCalorIA({ filas }: { filas: FilaAgregada[] }) {
   return <Grafica etiqueta="Mapa de calor" alto={Math.max(200, filas.length * 36 + 70)} opcion={opcionMapaCalor(filas, cols, oscuro)} />;
 }
 
-function TablaAgregada({ filas, etiqueta }: { filas: FilaAgregada[]; etiqueta: string }) {
+function TablaAgregada({ filas, etiqueta, orden, setOrden }: { filas: FilaAgregada[]; etiqueta: string; orden: Orden; setOrden: (o: Orden) => void }) {
   return (
     <div className="max-h-80 overflow-auto scroll-thin rounded-lg border border-line">
       <table className="w-full text-xs tabular">
         <thead className="sticky top-0 bg-surface-2 text-left text-muted">
           <tr>
-            <th className="px-2.5 py-2 font-medium">{etiqueta}</th>
-            <th className="px-2.5 py-2 text-right font-medium">Total</th>
-            <th className="px-2.5 py-2 text-right font-medium">Cerrados</th>
-            <th className="px-2.5 py-2 text-right font-medium">Abiertos</th>
-            <th className="w-40 px-2.5 py-2 font-medium">Avance</th>
+            <Th campo="clave" etiqueta={etiqueta} orden={orden} setOrden={setOrden} />
+            <Th campo="total" etiqueta="Total" orden={orden} setOrden={setOrden} className="text-right" />
+            <Th campo="cerrados" etiqueta="Cerrados" orden={orden} setOrden={setOrden} className="text-right" />
+            <Th campo="abiertos" etiqueta="Abiertos" orden={orden} setOrden={setOrden} className="text-right" />
+            <Th campo="avance" etiqueta="Avance" orden={orden} setOrden={setOrden} className="w-40" />
           </tr>
         </thead>
         <tbody>

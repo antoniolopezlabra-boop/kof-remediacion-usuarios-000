@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  Search, Download, ChevronLeft, ChevronRight, X, PanelRightOpen, Save, ShieldAlert, ArrowUpDown, CheckSquare, History, Plus, Copy, Trash2,
+  Search, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X, PanelRightOpen, Save, ShieldAlert, ArrowUpDown, CheckSquare, History, Plus, Copy, Trash2,
 } from 'lucide-react';
 import { filtrar, estadoVigencia, type Consulta, type Dimension, type Especial, type UsuarioSap } from '../../supabase/functions/_shared/datos.ts';
 import { useDatos, type CambiosUsuario, type EventoBitacora } from '../lib/datos';
@@ -12,7 +12,7 @@ import { COLUMNAS, cambioDesdeTexto, textoCelda, type Columna } from '../lib/col
 import { ETIQUETAS_CAMPO, fechaHora, fmt, ORDEN_AMBIENTES } from '../lib/ui';
 import { Boton, PildoraEstatus, useAvisos } from '../components/ui';
 
-const POR_PAGINA = 50;
+const OPCIONES_POR_PAGINA = [50, 100, 250, 0]; // 0 = todos
 const usuariosTxt = (n: number) => `${fmt(n)} ${n === 1 ? 'usuario' : 'usuarios'}`;
 type Orden = { campo: keyof UsuarioSap; dir: 1 | -1 };
 type Dir = 'derecha' | 'izquierda' | 'abajo' | 'arriba';
@@ -55,6 +55,7 @@ export default function Gestion() {
   });
   const [esp, setEsp] = useState<Especial[]>(() => TOGGLES.map((t) => t.esp).filter((e) => params.get(e) === '1'));
   const [pagina, setPagina] = useState(0);
+  const [porPagina, setPorPagina] = useState(50);
   const [orden, setOrden] = useState<Orden>({ campo: 'no', dir: 1 });
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   const [detalle, setDetalle] = useState<number | null>(null);
@@ -111,9 +112,32 @@ export default function Gestion() {
     return m;
   }, [usuarios, consulta, ctx]);
 
-  const paginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
-  const vista = filas.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA);
+  const tam = porPagina || Math.max(1, filas.length);
+  const paginas = Math.max(1, Math.ceil(filas.length / tam));
+  const paginaActual = Math.min(pagina, paginas - 1);
+  const vista = filas.slice(paginaActual * tam, (paginaActual + 1) * tam);
   const todosVista = vista.length > 0 && vista.every((u) => marcados.has(u.id));
+  const todoElFiltro = filas.length > 0 && filas.every((u) => marcados.has(u.id));
+  const irA = (p: number) => {
+    setPagina(Math.max(0, Math.min(p, paginas - 1)));
+    setEdit(null);
+  };
+  const paginacion = (
+    <Paginacion
+      pagina={paginaActual}
+      paginas={paginas}
+      total={filas.length}
+      desde={filas.length ? paginaActual * tam + 1 : 0}
+      hasta={paginaActual * tam + vista.length}
+      porPagina={porPagina}
+      onPagina={irA}
+      onPorPagina={(n) => {
+        setPorPagina(n);
+        setPagina(0);
+        setEdit(null);
+      }}
+    />
+  );
 
   async function guardar(ids: number[], cambios: CambiosUsuario, msg?: string) {
     try {
@@ -336,8 +360,30 @@ export default function Gestion() {
         </div>
       )}
 
+      {/* Selección de todo el filtro, no solo la página */}
+      {puedeEditar && todosVista && filas.length > vista.length && (
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl bg-accent/10 px-4 py-2.5 text-sm text-ink">
+          {todoElFiltro ? (
+            <>
+              Los <b>{usuariosTxt(filas.length)}</b> del filtro están seleccionados.
+              <button onClick={() => setMarcados(new Set())} className="font-medium text-brand hover:underline">
+                Quitar selección
+              </button>
+            </>
+          ) : (
+            <>
+              Seleccionaste los <b>{fmt(vista.length)}</b> de esta página.
+              <button onClick={() => setMarcados(new Set(filas.map((u) => u.id)))} className="font-medium text-brand hover:underline">
+                Seleccionar los {usuariosTxt(filas.length)} del filtro
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Tabla tipo hoja de cálculo */}
       <div className="card overflow-hidden">
+        <div className="border-b border-line px-4 py-2">{paginacion}</div>
         <div className="max-h-[70vh] overflow-auto scroll-thin">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-10 bg-surface-2 text-left text-xs text-muted">
@@ -407,19 +453,7 @@ export default function Gestion() {
             </tbody>
           </table>
         </div>
-        <footer className="flex items-center justify-between border-t border-line px-4 py-3 text-xs text-muted">
-          <span>
-            {fmt(filas.length)} usuarios · página {pagina + 1} de {paginas}
-          </span>
-          <div className="flex gap-1">
-            <button disabled={pagina === 0} onClick={() => { setPagina((p) => p - 1); setEdit(null); }} className="rounded-lg border border-line p-1.5 disabled:opacity-40" aria-label="Página anterior">
-              <ChevronLeft className="size-4" />
-            </button>
-            <button disabled={pagina >= paginas - 1} onClick={() => { setPagina((p) => p + 1); setEdit(null); }} className="rounded-lg border border-line p-1.5 disabled:opacity-40" aria-label="Página siguiente">
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
-        </footer>
+        <footer className="border-t border-line px-4 py-3">{paginacion}</footer>
       </div>
 
       {usuarioDetalle && (
@@ -435,6 +469,79 @@ export default function Gestion() {
         />
       )}
       {alta.abierto && <AltaUsuario base={alta.base} onCerrar={() => setAlta({ abierto: false })} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Paginación: rango visible, filas por página, primera/anterior/números/siguiente/última
+// ---------------------------------------------------------------------
+function Paginacion({
+  pagina, paginas, total, desde, hasta, porPagina, onPagina, onPorPagina,
+}: {
+  pagina: number;
+  paginas: number;
+  total: number;
+  desde: number;
+  hasta: number;
+  porPagina: number;
+  onPagina: (p: number) => void;
+  onPorPagina: (n: number) => void;
+}) {
+  // Ventana de números: 1 … (actual-1) actual (actual+1) … última
+  const numeros: (number | '…')[] = [];
+  for (let i = 0; i < paginas; i++) {
+    if (i === 0 || i === paginas - 1 || Math.abs(i - pagina) <= 1) numeros.push(i);
+    else if (numeros[numeros.length - 1] !== '…') numeros.push('…');
+  }
+  const btn = 'grid h-8 min-w-8 place-items-center rounded-lg border border-line px-2 text-xs text-ink-2 hover:bg-surface-2 disabled:opacity-35 disabled:hover:bg-transparent';
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
+      <span>
+        Mostrando <b className="text-ink tabular">{fmt(desde)}–{fmt(hasta)}</b> de <b className="text-ink tabular">{fmt(total)}</b>
+      </span>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-1.5">
+          Filas por página
+          <select value={porPagina} onChange={(e) => onPorPagina(Number(e.target.value))} className="h-8 rounded-lg border border-line bg-surface px-1.5 text-xs text-ink">
+            {OPCIONES_POR_PAGINA.map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? 'Todas' : n}
+              </option>
+            ))}
+          </select>
+        </label>
+        {paginas > 1 && (
+          <nav className="flex items-center gap-1" aria-label="Paginación">
+            <button className={btn} disabled={pagina === 0} onClick={() => onPagina(0)} aria-label="Primera página">
+              <ChevronsLeft className="size-4" />
+            </button>
+            <button className={btn} disabled={pagina === 0} onClick={() => onPagina(pagina - 1)} aria-label="Página anterior">
+              <ChevronLeft className="size-4" />
+            </button>
+            {numeros.map((n, i) =>
+              n === '…' ? (
+                <span key={`e${i}`} className="px-1">…</span>
+              ) : (
+                <button
+                  key={n}
+                  onClick={() => onPagina(n)}
+                  aria-current={n === pagina ? 'page' : undefined}
+                  className={clsx(btn, n === pagina && 'border-navy bg-navy font-semibold text-white hover:bg-navy dark:border-accent dark:bg-accent dark:text-navy')}
+                >
+                  {n + 1}
+                </button>
+              ),
+            )}
+            <button className={btn} disabled={pagina >= paginas - 1} onClick={() => onPagina(pagina + 1)} aria-label="Página siguiente">
+              <ChevronRight className="size-4" />
+            </button>
+            <button className={btn} disabled={pagina >= paginas - 1} onClick={() => onPagina(paginas - 1)} aria-label="Última página">
+              <ChevronsRight className="size-4" />
+            </button>
+          </nav>
+        )}
+      </div>
     </div>
   );
 }

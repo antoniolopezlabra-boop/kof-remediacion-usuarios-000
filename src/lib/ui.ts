@@ -8,6 +8,7 @@ const OSCURO: Record<string, string> = {
   '#4a3aa7': '#9085e9',
   '#1baf7a': '#199e70',
   '#008300': '#008300', // verde de «KIT Aprobado Pen. Implement» (mismo paso en claro y oscuro)
+  '#e34948': '#e66767', // rojo de «Bloqueado Pen. Eliminación»
 };
 
 export const SIN_CLASIFICAR_COLOR = { light: '#a3a3a0', dark: '#6b6f80' };

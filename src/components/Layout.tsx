@@ -179,14 +179,6 @@ export function Layout() {
         </main>
       </div>
 
-      {!asistente.abierto && !presentacion && (
-        <button
-          onClick={() => setAsistente({ abierto: true })}
-          className="no-print fixed right-5 bottom-5 z-30 flex items-center gap-2 rounded-full bg-navy px-4 py-3 text-sm font-medium text-white shadow-xl ring-1 ring-white/10 transition hover:-translate-y-0.5 dark:bg-accent dark:text-navy"
-        >
-          <Sparkles className="size-4" /> Pregúntale a la IA
-        </button>
-      )}
       <CambiarPassword abierto={password} onCerrar={() => setPassword(false)} />
       <Asistente abierto={asistente.abierto} preguntaInicial={asistente.pregunta} onCerrar={() => setAsistente({ abierto: false })} />
     </div>

@@ -54,6 +54,8 @@ export default function Gestion() {
     return ini;
   });
   const [esp, setEsp] = useState<Especial[]>(() => TOGGLES.map((t) => t.esp).filter((e) => params.get(e) === '1'));
+  // Estatus de remediación: selección múltiple (los chips se combinan con «o»)
+  const [estatusSel, setEstatusSel] = useState<string[]>([]);
   const [pagina, setPagina] = useState(0);
   const [porPagina, setPorPagina] = useState(50);
   const [orden, setOrden] = useState<Orden>({ campo: 'no', dir: 1 });
@@ -64,8 +66,15 @@ export default function Gestion() {
   const [masivo, setMasivo] = useState<{ campo: keyof UsuarioSap; valor: string }>({ campo: 'remediacion', valor: '' });
 
   const consulta: Consulta = useMemo(
-    () => ({ texto, especiales: esp, filtros: Object.fromEntries(Object.entries(sel).filter(([, v]) => v).map(([k, v]) => [k, [v!]])) }),
-    [texto, esp, sel],
+    () => ({
+      texto,
+      especiales: esp,
+      filtros: {
+        ...Object.fromEntries(Object.entries(sel).filter(([k, v]) => v && k !== 'remediacion').map(([k, v]) => [k, [v!]])),
+        ...(estatusSel.length ? { remediacion: estatusSel } : {}),
+      },
+    }),
+    [texto, esp, sel, estatusSel],
   );
   const filas = useMemo(() => {
     const f = filtrar(usuarios, consulta, ctx);
@@ -257,14 +266,24 @@ export default function Gestion() {
 
       {/* Chips de estatus */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => setSel((s) => ({ ...s, remediacion: undefined }))} className={clsx('rounded-full border px-3 py-1.5 text-xs font-medium', !sel.remediacion ? 'border-navy bg-navy text-white dark:border-accent dark:bg-accent dark:text-navy' : 'border-line bg-surface text-ink-2')}>
+        <button onClick={() => setEstatusSel([])} aria-pressed={!estatusSel.length} className={clsx('rounded-full border px-3 py-1.5 text-xs font-medium', !estatusSel.length ? 'border-navy bg-navy text-white dark:border-accent dark:bg-accent dark:text-navy' : 'border-line bg-surface text-ink-2')}>
           Todos · {fmt(Object.values(conteo).reduce((a, b) => a + b, 0))}
         </button>
         {[...catalogo.map((c) => c.nombre), ...(conteo['Sin clasificar'] ? ['Sin clasificar'] : [])].map((n) => (
-          <button key={n} onClick={() => setSel((s) => ({ ...s, remediacion: s.remediacion === n ? undefined : n }))} className={clsx('rounded-full transition', sel.remediacion === n && 'ring-2 ring-accent')}>
+          <button
+            key={n}
+            onClick={() => setEstatusSel((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]))}
+            aria-pressed={estatusSel.includes(n)}
+            className={clsx('rounded-full transition', estatusSel.includes(n) && 'ring-2 ring-accent')}
+          >
             <PildoraEstatus nombre={n === 'Sin clasificar' ? null : n} catalogo={catalogo} conteo={conteo[n] ?? 0} />
           </button>
         ))}
+        {estatusSel.length > 1 && (
+          <span className="self-center text-xs text-muted">
+            {estatusSel.length} estatus combinados · <b className="text-ink">{usuariosTxt(estatusSel.reduce((t, e) => t + (conteo[e] ?? 0), 0))}</b>
+          </span>
+        )}
       </div>
 
       {/* Filtros */}
@@ -305,8 +324,8 @@ export default function Gestion() {
             </button>
           ))}
         </div>
-        {(texto || esp.length || Object.values(sel).some(Boolean)) && (
-          <button onClick={() => { setTexto(''); setEsp([]); setSel({}); }} className="text-xs text-muted hover:text-ink">
+        {(texto || esp.length || estatusSel.length || Object.values(sel).some(Boolean)) && (
+          <button onClick={() => { setTexto(''); setEsp([]); setSel({}); setEstatusSel([]); }} className="text-xs text-muted hover:text-ink">
             Limpiar filtros
           </button>
         )}
@@ -389,7 +408,7 @@ export default function Gestion() {
             <thead className="sticky top-0 z-10 bg-surface-2 text-left text-xs text-muted">
               <tr>
                 {puedeEditar && (
-                  <th className="sticky left-0 z-20 w-10 bg-surface-2 px-3 py-2.5">
+                  <th className="sticky left-0 z-20 w-10 min-w-10 max-w-10 bg-surface-2 px-0 py-2.5 text-center">
                     <input
                       type="checkbox"
                       aria-label="Seleccionar página"
@@ -404,7 +423,7 @@ export default function Gestion() {
                     />
                   </th>
                 )}
-                {encabezado('no', 'No.', clsx('sticky z-20 bg-surface-2', puedeEditar ? 'left-10' : 'left-0'))}
+                {encabezado('no', 'No.', clsx('sticky z-20 w-20 min-w-20 bg-surface-2 shadow-[inset_-1px_0_0_var(--line)]', puedeEditar ? 'left-10' : 'left-0'))}
                 {COLUMNAS.map((c) => encabezado(c.campo, c.etiqueta, c.ancho))}
                 <th className="w-10" />
               </tr>
@@ -413,7 +432,7 @@ export default function Gestion() {
               {vista.map((u, fila) => (
                 <tr key={u.id} className={clsx('group', recientes.has(u.id) && 'flash', marcados.has(u.id) && 'bg-accent/5')}>
                   {puedeEditar && (
-                    <td className="sticky left-0 z-[5] border-t border-line bg-surface px-3 py-1.5 group-hover:bg-surface-2">
+                    <td className="sticky left-0 z-[5] w-10 min-w-10 max-w-10 border-t border-line bg-surface px-0 py-1.5 text-center group-hover:bg-surface-2">
                       <input
                         type="checkbox"
                         aria-label={`Seleccionar ${u.usuario}`}
@@ -422,7 +441,7 @@ export default function Gestion() {
                       />
                     </td>
                   )}
-                  <td className={clsx('sticky z-[5] border-t border-line bg-surface px-3 py-1.5 text-muted tabular group-hover:bg-surface-2', puedeEditar ? 'left-10' : 'left-0')}>{u.no}</td>
+                  <td className={clsx('sticky z-[5] w-20 min-w-20 border-t border-line bg-surface px-3 py-1.5 text-muted tabular shadow-[inset_-1px_0_0_var(--line)] group-hover:bg-surface-2', puedeEditar ? 'left-10' : 'left-0')}>{u.no}</td>
                   {COLUMNAS.map((c, col) => (
                     <Celda
                       key={c.campo}

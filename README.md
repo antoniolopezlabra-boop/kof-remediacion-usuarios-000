@@ -9,8 +9,8 @@ SAP del mandante 000 de Coca-Cola FEMSA, operado por DXC Technology.
   modo presentación (pantalla completa) y exportación a PDF.
 - **Gestión de usuarios** (tipo hoja de cálculo): el equipo TQS edita cualquier columna con
   clic en la celda (Enter/Tab guarda y avanza, Esc cancela), cambia cualquier columna en bloque,
-  agrega filas nuevas («No.» consecutivo automático) o duplica una existente. Solo el
-  administrador puede eliminar filas. Todo cambio queda en la bitácora y los tableros se recalculan
+  agrega filas nuevas («No.» consecutivo automático) o duplica una existente, y elimina filas
+  (con confirmación; cada baja queda en la bitácora). Todo cambio queda en la bitácora y los tableros se recalculan
   en vivo para todos (Supabase Realtime).
 - **Asistente IA (Claude)**: responde preguntas con los datos vivos mediante herramientas
   (no inventa cifras) y, cuando la respuesta no está en el tablero, crea una tarjeta

@@ -39,7 +39,7 @@ const NO_MASIVAS: (keyof UsuarioSap)[] = ['usuario', 'nombre'];
 
 export default function Gestion() {
   const { usuarios, catalogo, ctx, actualizar, eliminar, recientes } = useDatos();
-  const { puedeEditar, esAdmin } = useAuth();
+  const { puedeEditar } = useAuth();
   const avisar = useAvisos();
   const [params] = useSearchParams();
 
@@ -371,7 +371,7 @@ export default function Gestion() {
           <Boton variante="fantasma" onClick={() => setMarcados(new Set())}>
             Cancelar
           </Boton>
-          {esAdmin && (
+          {puedeEditar && (
             <Boton variante="peligro" onClick={eliminarMarcados} className="ml-auto">
               <Trash2 className="size-4" /> Eliminar
             </Boton>
@@ -782,7 +782,7 @@ function AltaUsuario({ base, onCerrar }: { base?: Partial<UsuarioSap>; onCerrar:
 // ---------------------------------------------------------------------
 function Detalle({ u, onCerrar, onGuardar, onDuplicar }: { u: UsuarioSap; onCerrar: () => void; onGuardar: (c: CambiosUsuario) => Promise<void>; onDuplicar: () => void }) {
   const { catalogo, eliminar } = useDatos();
-  const { puedeEditar, esAdmin } = useAuth();
+  const { puedeEditar } = useAuth();
   const avisar = useAvisos();
   const [form, setForm] = useState<Record<string, string>>({});
   const [historial, setHistorial] = useState<EventoBitacora[] | null>(null);
@@ -905,7 +905,7 @@ function Detalle({ u, onCerrar, onGuardar, onDuplicar }: { u: UsuarioSap; onCerr
         </div>
         {puedeEditar && (
           <footer className="flex flex-wrap items-center gap-2 border-t border-line px-5 py-3">
-            {esAdmin && (
+            {puedeEditar && (
               <Boton variante="peligro" onClick={borrar} title="Eliminar del inventario">
                 <Trash2 className="size-4" />
               </Boton>
